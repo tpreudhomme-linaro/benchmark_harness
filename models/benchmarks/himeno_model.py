@@ -51,7 +51,7 @@ class ModelImplementation(BenchmarkModel):
         This entitles : installing dependencies, fetching benchmark code
         Can use Ansible to do this platform independantly and idempotently"""
         self.build_root = os.path.join(self.benchmark_rootpath, self.name)
-        prepare_cmds = [[]]
+        prepare_cmds = []
         prepare_cmds.append(['mkdir', self.build_root])
         prepare_cmds.append(
             ['wget', '-P', self.build_root, self.benchmark_url])
@@ -65,7 +65,7 @@ class ModelImplementation(BenchmarkModel):
         """Prepares envrionment for running the benchmark
         This entitles : fetching the benchmark and preparing
         for running it"""
-        prepare_cmds = [[]]
+        prepare_cmds = []
         prepare_run_cmd = []
         prepare_cmds.append(prepare_run_cmd)
         return prepare_cmds
@@ -75,7 +75,7 @@ class ModelImplementation(BenchmarkModel):
         """Builds the benchmark using the base + extra flags"""
         if benchmark_build_vars == '':
             benchmark_build_vars = 'MODEL=SMALL'
-        build_cmd = [[]]
+        build_cmd = []
         make_cmd = []
         make_cmd.append('make')
         make_cmd.append('-C')
@@ -92,13 +92,18 @@ class ModelImplementation(BenchmarkModel):
     def run_benchmark(self, binary_name, extra_runflags):
         """Runs the benchmarks using the base + extra flags"""
         binary_name = 'bmt'
-        binary_path = os.path.join(self.build_root, binary_name)
-        run_cmd = [[]]
-        if extra_runflags is None or extra_runflags == '':
-            run_cmd.append([binary_path])
-        else:
-            run_cmd.append([binary_path, extra_runflags])
-        return run_cmd
+        binary_path = os.path.join(self.benchmark_rootpath, self.name, binary_name)
+        run_cmds = []
+        run_args = self.parse_run_args(extra_runflags)
+        if (run_args.iterations).isdigit():
+            for i in range(0, int(run_args.iterations)):
+                run_cmd=[]
+                metadata = 'i=' + str(i) + 's=' + run_args.size + 'c=' + run_args.complexity
+                run_cmd.append(binary_path)
+                run_cmd.append(metadata)
+                run_cmds.append(run_cmd)
+
+        return run_cmds
 
     def get_plugin(self):
         """Returns the plugin to parse the results"""

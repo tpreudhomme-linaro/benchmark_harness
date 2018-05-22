@@ -78,7 +78,7 @@ class BenchmarkController(object):
             self.complete_build_flags = complete_build_flags
             self.complete_link_flags = complete_link_flags
 
-    def _output_logs(self, stdout, perf_results):
+    def _output_logs(self, stdout, perf_results, metadata):
         if stdout and not isinstance(stdout, str) and not isinstance(stdout, dict):
             raise TypeError('stdout should be a string of bytes or a dictionary')
         if perf_results and not isinstance(perf_results, dict):
@@ -87,17 +87,17 @@ class BenchmarkController(object):
             raise TypeError('%s should be a directory' % self.results_path)
 
         if isinstance(stdout, dict):
-            with open(self.results_path + '/' + self.report_name + '_stdout_parser_results.report', 'w') as stdout_d:
+            with open(self.results_path + '/' + self.report_name + metadata + '_stdout_parser_results.report', 'w') as stdout_d:
                 yaml.dump(stdout, stdout_d, default_flow_style=False)
         else:
-            with open(self.results_path + '/' + self.report_name + '_stdout.report', 'w') as stdout_d:
+            with open(self.results_path + '/' + self.report_name + metadata + '_stdout.report', 'w') as stdout_d:
                 stdout_d.write(stdout)
 
         if isinstance(perf_results, dict):
-            with open(self.results_path + '/' + self.report_name + '_perf_parser_results.report', 'w') as perf_res_d:
+            with open(self.results_path + '/' + self.report_name + metadata + '_perf_parser_results.report', 'w') as perf_res_d:
                 yaml.dump(perf_results, perf_res_d, default_flow_style=False)
         else:
-            with open(self.results_path + '/' + self.report_name + '_perf_parser_results.report', 'w') as perf_res_d:
+            with open(self.results_path + '/' + self.report_name + metadata + '_perf_parser_results.report', 'w') as perf_res_d:
                 perf_res_d.write(perf_results)
 
     def _make_dirs(self):
@@ -139,19 +139,27 @@ class BenchmarkController(object):
         self._build_complete_flags()
 
 
-    def _post_run(self, stdout, perf_results):
+    def _post_run(self, stdouts, perf_results, metadatas):
         """This function executes after the benchmark has been run"""
-        self.logger.debug(stdout)
+        self.logger.debug(stdouts)
         self.logger.debug(perf_results)
-        self._output_logs(stdout, perf_results)
+        self.logger.debug(metadatas)
+        for i in range(0, len(metadatas)):
+            self._output_logs(stdouts[i], perf_results[i], metadatas[i])
         self.logger.info('The truth is out there')
 
     def _run_all(self, list_of_commands, perf=False):
         """This function executes the command required for the benchmark
         prebuild, build, postbuild, prerun and run. When perf needs to be ran,
         and output needs to be returned, set  perf to True"""
+        if perf:
+            stdouta = []
+            perf_results = []
+            metadatas = []
         for cmd in list_of_commands:
             if cmd != []:
+                if perf:
+                    metadata = cmd.pop()
                 self.logger.debug('Running command : ' + str(cmd))
                 if perf:
                     perf_parser = LinuxPerf(cmd, self.benchmark_model.get_plugin())
@@ -167,8 +175,13 @@ class BenchmarkController(object):
 
                 self.logger.debug('Command ran')
 
+                if perf:
+                    stdouta += [stdout]
+                    perf_results += [stderr]
+                    metadatas += [metadata]
+
         if perf:
-            return stdout, stderr
+            return stdouta, perf_results, metadatas
 
     def main(self):
         """This is where all the logic plays, as you would expect from a
@@ -194,10 +207,10 @@ class BenchmarkController(object):
                                                                  self.compiler_model.getDictCompilers()))
 
         #run
-        stdout, perf_result = self._run_all(self.benchmark_model.run_benchmark(self.binary_name,
+        stdout, perf_result, metadata = self._run_all(self.benchmark_model.run_benchmark(self.binary_name,
                                                                                self.args.benchmark_options), perf=True)
 
-        self._post_run(stdout, perf_result)
+        self._post_run(stdout, perf_result, metadata)
 
         return 0
 
