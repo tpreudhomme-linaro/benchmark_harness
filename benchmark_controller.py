@@ -190,7 +190,8 @@ class BenchmarkController(object):
         #post_build
 
         #pre_run
-        self._run_all(self.benchmark_model.prepare_run_benchmark(self.args.benchmark_run_deps))
+        self._run_all(self.benchmark_model.prepare_run_benchmark(self.args.benchmark_run_deps,
+                                                                 self.compiler_model.getDictCompilers()))
 
         #run
         stdout, perf_result = self._run_all(self.benchmark_model.run_benchmark(self.binary_name,
