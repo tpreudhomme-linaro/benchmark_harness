@@ -83,7 +83,8 @@ class CompilerFactory(object):
         for model in list_compiler_modules:
             if model.find('_model') != -1:
                 try:
-                    loaded_model = ModelLoader(model, 'compiler', original_path).load()
+                    loaded_model = ModelLoader(
+                        model, 'compiler', original_path).load()
                     if loaded_model.check(bin_path):
                         return loaded_model
                 except ImportError as err:

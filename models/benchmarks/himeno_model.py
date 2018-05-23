@@ -61,7 +61,7 @@ class ModelImplementation(BenchmarkModel):
                              os.path.join(self.build_root, 'himenobmt.c.lzh')])
         return prepare_cmds
 
-    def prepare_run_benchmark(self, extra_deps):
+    def prepare_run_benchmark(self, extra_deps, compilers_dict):
         """Prepares envrionment for running the benchmark
         This entitles : fetching the benchmark and preparing
         for running it"""
@@ -92,13 +92,15 @@ class ModelImplementation(BenchmarkModel):
     def run_benchmark(self, binary_name, extra_runflags):
         """Runs the benchmarks using the base + extra flags"""
         binary_name = 'bmt'
-        binary_path = os.path.join(self.benchmark_rootpath, self.name, binary_name)
+        binary_path = os.path.join(
+            self.benchmark_rootpath, self.name, binary_name)
         run_cmds = []
         run_args = self.parse_run_args(extra_runflags)
         if (run_args.iterations).isdigit():
             for i in range(0, int(run_args.iterations)):
-                run_cmd=[]
-                metadata = 'i=' + str(i) + 's=' + run_args.size + 'c=' + run_args.complexity
+                run_cmd = []
+                metadata = 'i=' + str(i) + 's=' + \
+                    run_args.size + 'c=' + run_args.complexity
                 run_cmd.append(binary_path)
                 run_cmd.append(metadata)
                 run_cmds.append(run_cmd)

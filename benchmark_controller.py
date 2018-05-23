@@ -18,9 +18,12 @@ import yaml
 import logging
 import coloredlogs
 from pathlib import Path
+
 from helper.compiler_factory import CompilerFactory
 from helper.model_loader import ModelLoader
 from helper.benchmark_logger import BenchmarkLogger
+from helper.benchmark_output import BenchmarkOutput
+
 from models.compilers.compiler_model import CompilerModel
 from models.benchmarks.benchmark_model import BenchmarkModel
 from models.machines.machine_model import MachineModel
@@ -37,7 +40,6 @@ class BenchmarkController(object):
         self.root_path = os.getcwd()
         self.logger = BenchmarkLogger(logging.getLogger(__name__), self.parser,
                                       self.args.verbose)
-
 
     def _make_unique_name(self):
         """Unique name for the binary and results files"""
@@ -80,7 +82,8 @@ class BenchmarkController(object):
 
     def _output_logs(self, stdout, perf_results, metadata):
         if stdout and not isinstance(stdout, str) and not isinstance(stdout, dict):
-            raise TypeError('stdout should be a string of bytes or a dictionary')
+            raise TypeError(
+                'stdout should be a string of bytes or a dictionary')
         if perf_results and not isinstance(perf_results, dict):
             raise TypeError('perf_results should be a dictionary')
         if not os.path.isdir(self.results_path):
@@ -107,7 +110,7 @@ class BenchmarkController(object):
         self._make_unique_name()
 
         self.unique_root_path = os.path.join(self.args.benchmark_root,
-                                        self.binary_name)
+                                             self.binary_name)
         self.compiler_path = os.path.join(self.unique_root_path, 'compiler/')
         self.benchmark_path = os.path.join(self.unique_root_path, 'benchmark/')
         self.results_path = os.path.join(self.unique_root_path, 'results/')
@@ -138,14 +141,11 @@ class BenchmarkController(object):
 
         self._build_complete_flags()
 
-
-    def _post_run(self, stdouts, perf_results, metadatas):
+    def _post_run(self, benchmark_output):
         """This function executes after the benchmark has been run"""
-        self.logger.debug(stdouts)
-        self.logger.debug(perf_results)
-        self.logger.debug(metadatas)
-        for i in range(0, len(metadatas)):
-            self._output_logs(stdouts[i], perf_results[i], metadatas[i])
+        for i in range(0, benchmark_output.len()):
+            stdout, perf_result, metadata = benchmark_output.get(i)
+            self._output_logs(stdout, perf_result, metadata)
         self.logger.info('The truth is out there')
 
     def _run_all(self, list_of_commands, perf=False):
@@ -153,16 +153,15 @@ class BenchmarkController(object):
         prebuild, build, postbuild, prerun and run. When perf needs to be ran,
         and output needs to be returned, set  perf to True"""
         if perf:
-            stdouta = []
-            perf_results = []
-            metadatas = []
+            output = BenchmarkOutput()
         for cmd in list_of_commands:
             if cmd != []:
                 if perf:
                     metadata = cmd.pop()
                 self.logger.debug('Running command : ' + str(cmd))
                 if perf:
-                    perf_parser = LinuxPerf(cmd, self.benchmark_model.get_plugin())
+                    perf_parser = LinuxPerf(
+                        cmd, self.benchmark_model.get_plugin())
                     # stderr <=> perf_results
                     stdout, stderr = perf_parser.stat()
                 else:
@@ -176,12 +175,10 @@ class BenchmarkController(object):
                 self.logger.debug('Command ran')
 
                 if perf:
-                    stdouta += [stdout]
-                    perf_results += [stderr]
-                    metadatas += [metadata]
+                    output.add(stdout, stderr, metadata)
 
         if perf:
-            return stdouta, perf_results, metadatas
+            return output
 
     def main(self):
         """This is where all the logic plays, as you would expect from a
@@ -191,26 +188,26 @@ class BenchmarkController(object):
 
         self._load_models()
 
-        #prepare_build
-        self._run_all(self.benchmark_model.prepare_build_benchmark(self.args.benchmark_build_deps))
+        # prepare_build
+        self._run_all(self.benchmark_model.prepare_build_benchmark(
+            self.args.benchmark_build_deps))
 
-        #build
+        # build
         self._run_all(self.benchmark_model.build_benchmark(self.compiler_model.getDictCompilers(),
-                                                              self.complete_build_flags,
-                                                              self.complete_link_flags,
-                                                              self.binary_name,
-                                                              self.args.benchmark_build_vars))
-        #post_build
+                                                           self.complete_build_flags,
+                                                           self.complete_link_flags,
+                                                           self.binary_name,
+                                                           self.args.benchmark_build_vars))
+        # post_build
 
-        #pre_run
+        # pre_run
         self._run_all(self.benchmark_model.prepare_run_benchmark(self.args.benchmark_run_deps,
                                                                  self.compiler_model.getDictCompilers()))
 
-        #run
-        stdout, perf_result, metadata = self._run_all(self.benchmark_model.run_benchmark(self.binary_name,
-                                                                               self.args.benchmark_options), perf=True)
-
-        self._post_run(stdout, perf_result, metadata)
+        # run
+        benchmark_output = self._run_all(self.benchmark_model.run_benchmark(self.binary_name,
+                                                                            self.args.benchmark_options), perf=True)
+        self._post_run(benchmark_output)
 
         return 0
 

@@ -2,6 +2,7 @@
 
 import argparse
 
+
 class BenchmarkModel(object):
     def __init__(self):
         self.name = 'default'

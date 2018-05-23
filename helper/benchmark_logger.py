@@ -4,10 +4,11 @@
 import logging
 import coloredlogs
 
+
 class BenchmarkLogger(object):
     def __init__(self, logger, parser, verbosity):
         self.logger = logger
-        coloredlogs.install(level = max(30 - verbosity*10, 0),
+        coloredlogs.install(level=max(30 - verbosity*10, 0),
                             logger=self.logger)
         self.parser = parser
 
@@ -25,4 +26,3 @@ class BenchmarkLogger(object):
 
     def debug(self, trace):
         self.logger.debug(trace)
-

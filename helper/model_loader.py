@@ -39,4 +39,4 @@ class ModelLoader(object):
                     'models.' + self.class_type + 's.' + self.model_name)
             return mod.ModelImplementation()
         raise ImportError('Could not load %s model at %s' % (self.model_name,
-                                                                 self.model_path))
+                                                             self.model_path))
